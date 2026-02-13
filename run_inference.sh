@@ -10,17 +10,17 @@
 # See the License for the specific language governing permissions and limitations under the License.
 
 
-datafile=data/beta_fcpgs.csv
-patientinfofile=data/BloodMethMetadata.csv
+datafile=data/TCGA-LAML/betavalues_top1kCpGs_noA.csv
+patientinfofile=data/TCGA-LAML/metadata_dnam_241125_with_purity_indexed.csv
 mode=neutral
 outputdir=examples/$mode
-samplename=SCLL-059
+samplename=TCGA-AB-2868-03
 nlive=100
 NSIM=2000
 sample_meth=rwalk
-mkdir -p ${outputdir}
+mkdir -p "${outputdir}"
 
-inference.py $datafile $patientinfofile $outputdir $samplename --verbose -nlive $nlive -NSIM $NSIM -sample_meth $sample_meth -mode $mode
+python scripts/inference.py "$datafile" "$patientinfofile" "$outputdir" "$samplename" --verbose -nlive "$nlive" -NSIM "$NSIM" -sample_meth "$sample_meth" -mode "$mode"
 
-plot_posterior.py $datafile $patientinfofile $outputdir $samplename -NSIM $NSIM -mode $mode
-calculate_loo.py $datafile $patientinfofile $outputdir $samplename -mode $mode
+python scripts/plot_posterior.py "$datafile" "$patientinfofile" "$outputdir" "$samplename" -NSIM "$NSIM" -mode "$mode"
+python scripts/calculate_loo.py "$datafile" "$patientinfofile" "$outputdir" "$samplename" -mode "$mode"
