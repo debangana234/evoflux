@@ -92,7 +92,16 @@ def main():
             "an integer or string index was expected.")
 
     y = beta_values[sample].dropna().values
-    T = patientinfo.loc[sample, 'AGE_SAMPLING']
+    age_col = next(
+        (c for c in ("AGE_SAMPLING", "Diagnosis Age") if c in patientinfo.columns),
+        None,
+    )
+    if age_col is None:
+        raise KeyError(
+            "Patient info file is missing an age column. Expected one of "
+            "'AGE_SAMPLING' or 'Diagnosis Age'."
+        )
+    T = patientinfo.loc[sample, age_col]
 
     rho = patientinfo.loc[sample, 'PURITY_TUMOR_CONSENSUS'] / 100
 
