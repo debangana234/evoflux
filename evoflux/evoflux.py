@@ -192,7 +192,7 @@ def stochastic_growth(theta, tau, mu, gamma, nu, zeta, T, NSIM):
         betaCancer: fCpG methylation fraction distribution - np.array[float]
     """
 
-    # calculate the time step so all transition probabilities are <= 10%
+    # calculate the largest time step for simulation so all transition probabilities are <= 10%
     dt_max = 0.1 / np.max((
         2*gamma, 
         2*mu,
@@ -229,6 +229,8 @@ def stochastic_growth(theta, tau, mu, gamma, nu, zeta, T, NSIM):
                                                     k_cancer, w_cancer, 
                                                     mu, gamma, nu, zeta,
                                                     S_cancer[i+1], dt, rng)
+        
+        #print(f"Time step {i+1}/{len(t)-1} complete", end = "\r")
 
 
     with np.errstate(divide='raise', over='raise'):
@@ -839,18 +841,21 @@ def loglikelihood_perpoint(y, params, constants, mode):
     if mode.lower() == 'neutral':
         try:
             logl = loglikelihood_perpoint_neutral(y, params, constants)
-        except (ValueError, OverflowError, RuntimeWarning, FloatingPointError) as e:
+        except (ValueError, OverflowError, RuntimeWarning, FloatingPointError,
+                linalg.LinAlgError, np.linalg.LinAlgError) as e:
             logl = np.full(len(y), -np.inf)
 
     elif mode.lower() == 'subclonal':
         try:
             logl = loglikelihood_perpoint_subclonal(y, params, constants)
-        except (ValueError, OverflowError, RuntimeWarning, FloatingPointError) as e:
+        except (ValueError, OverflowError, RuntimeWarning, FloatingPointError,
+                linalg.LinAlgError, np.linalg.LinAlgError) as e:
             logl = np.full(len(y), -np.inf)
     elif mode.lower() == 'independent':
         try:
             logl = loglikelihood_perpoint_independent(y, params, constants)
-        except (ValueError, OverflowError, RuntimeWarning, FloatingPointError) as e:
+        except (ValueError, OverflowError, RuntimeWarning, FloatingPointError,
+                linalg.LinAlgError, np.linalg.LinAlgError) as e:
             logl = np.full(len(y), -np.inf)
     else:
         raise ValueError("mode must be one of 'neutral', 'subclonal' or 'independent")
@@ -860,7 +865,8 @@ def loglikelihood_perpoint(y, params, constants, mode):
 def loglikelihood(y, params, constants, mode):
     try:
         LL = np.sum(loglikelihood_perpoint(y, params, constants, mode))
-    except (ValueError, OverflowError, RuntimeWarning) as e:
+    except (ValueError, OverflowError, RuntimeWarning,
+            linalg.LinAlgError, np.linalg.LinAlgError) as e:
         LL = -np.inf
 
     return LL
@@ -889,7 +895,8 @@ def generate_data_neutral(params, constants):
 
         y = add_noise(betaProb, delta, eta, kappa)
 
-    except (ValueError, OverflowError, FloatingPointError) as e:
+    except (ValueError, OverflowError, FloatingPointError,
+            linalg.LinAlgError, np.linalg.LinAlgError) as e:
         y = np.full(NSIM, -1)
 
     return y
@@ -922,7 +929,8 @@ def generate_data_subclonal(params, constants):
 
         y = add_noise(betaProb, delta, eta, kappa)
         
-    except (ValueError, OverflowError, FloatingPointError) as e:
+    except (ValueError, OverflowError, FloatingPointError,
+            linalg.LinAlgError, np.linalg.LinAlgError) as e:
         y = np.full(NSIM, -1)
 
     return y
@@ -960,7 +968,8 @@ def generate_data_independent(params, constants):
 
         y = add_noise(betaProb, delta, eta, kappa)
         
-    except (ValueError, OverflowError, FloatingPointError) as e:
+    except (ValueError, OverflowError, FloatingPointError,
+            linalg.LinAlgError, np.linalg.LinAlgError) as e:
         y = np.full(NSIM, -1)
 
     return y
@@ -1196,7 +1205,7 @@ def run_inference(
     DUMP_EVERY_N = 50
     LOG_EVERY_N = 20
     print(f'Performing Dynesty sampling with {Ncores} threads')
-    with Pool() as pool:
+    with Pool(processes=Ncores) as pool:
         sampler = NestedSampler(loglikelihood_function, prior_function, ndims,
                                 bound='multi', sample=sample_meth, nlive=nlive, 
                                 pool=pool, queue_size=Ncores)
@@ -1232,10 +1241,9 @@ def run_inference(
             # print results
             print_fn(results, nit, ncall, add_live_it=it2+1, dlogz=dlogz)
 
+    res = sampler.results
     with open(outsamples, 'wb') as f:
         joblib.dump(res, f)
-
-    res = sampler.results
 
     t1 = time()
     timesampler = int(t1-t0)
@@ -1245,4 +1253,3 @@ def run_inference(
     print(res.summary())
 
     return res
-

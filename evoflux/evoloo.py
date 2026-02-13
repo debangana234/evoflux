@@ -95,6 +95,12 @@ def calculate_loo(
     constants = [rho, T, Smin, Smax, NSIM] 
 
     outsamples = os.path.join(outsamplesdir, f'{sample}_posterior.pkl')
+    if not os.path.exists(outsamples):
+        raise FileNotFoundError(
+            f"Missing inference results file: {outsamples}. "
+            "Run inference first (e.g. `scripts/inference.py ...`), or ensure "
+            "you're pointing at the correct `outsamplesdir`/`sample`."
+        )
     with open(outsamples, 'rb') as f:
         res = joblib.load(f)
 
